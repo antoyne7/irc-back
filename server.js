@@ -42,7 +42,7 @@ require("./socketio")(server);
 // require("./socketio")(https_server);
 
 // Start listening
-const PORT = 65080;
+const PORT = process.env.PORT || 65080;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}.`);
 });
