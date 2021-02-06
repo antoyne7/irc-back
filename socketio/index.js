@@ -17,7 +17,7 @@ module.exports = function (server) {
 
     const io = socketio(server, {
         cors: {
-            origin: ["https://ircal-mern.vercel.app/", "http://localhost:3000", "https://localhost:3000"],
+            origin: ["https://ircal-mern.vercel.app", "http://localhost:3000", "https://localhost:3000"],
             methods: ["GET", "POST"]
         }
     });
