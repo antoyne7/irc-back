@@ -1,0 +1,21 @@
+runtime: nodejs
+service: api
+env: flex
+
+manual_scaling:
+  instances: 1
+
+network:
+  session_affinity: true
+
+env_variables:
+  mongo_uri: "mongodb+srv://ircmern:rcmvfAu7F4XRIbkV@cluster0.iroiu.mongodb.net/ircmern?authSource=admin&replicaSet=atlas-kj11q3-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true"
+  jwt_secret: "super-mern-application"
+  # DB_NAME: "database"
+  # DB_PASS: "xyz1234pbj"
+  # DB_INSTANCE: "project-name:us-central1:sql-instance"
+  # TESTVAR: "hehehe"
+  # TWILIO_SID: "XYZ1234PBJ"
+  # TWILIO_AUTH_TOKEN: "XYZ1234PBJ"
+  # GOOGLE_CLIENT_ID: "xyz1234PBJ.apps.googleusercontent.com"
+  # GOOGLE_CLIENT_SECRET: "xyz1234-PBJ"
