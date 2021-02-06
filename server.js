@@ -14,7 +14,7 @@ const app = express();
 // };
 
 const corsOptions = {
-    origin: ["https://irc-fron.vercel.app", "http://localhost:3000"],
+    origin: ["https://ircal-mern.vercel.app/", "http://localhost:3000"],
 };
 
 const server = http.createServer(app);
