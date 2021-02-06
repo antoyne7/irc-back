@@ -17,7 +17,7 @@ module.exports = function (server) {
 
     const io = socketio(server, {
         cors: {
-            origin: ["https://epitech-irc-api.ew.r.appspot.com", "http://localhost:3000", "https://localhost:3000", "https://192.168.1.146:3000", "http://192.168.1.146:3000"],
+            origin: ["https://irc-fron.vercel.app/", "http://localhost:3000", "https://localhost:3000"],
             methods: ["GET", "POST"]
         }
     });
