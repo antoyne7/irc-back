@@ -17,36 +17,22 @@ const storage = multer.diskStorage({
 })
 const upload = multer({storage})
 
-// Update user picture
-router.post('/profile/picture',
+// Update user
+router.post('/profile',
     [middlewares.auth.verifyToken, upload.single('picture')],
     async (req, res) => {
-        try {
+        req.connectedUser.username = req.body.username
+        req.connectedUser.email = req.body.email
+
+        if (typeof req.file !== "undefined") {
             const oldPicturePath =
                 __dirname + '/../uploads/users-pictures/' + req.connectedUser.picture
             if (fs.existsSync(oldPicturePath)) {
                 fs.unlinkSync(oldPicturePath)
             }
-
             req.connectedUser.picture = req.file.filename
-            await req.connectedUser.save(err => {
-                if (err) {
-                    res.status(500).send({message: err});
-                    return;
-                }
-                res.status(201).send({message: "L'avatar à été enregistré avec succès!"});
-            });
-        } catch (error) {
-            res.status(400).send({message: error})
         }
-    });
 
-// Update user
-router.post('/profile',
-    [middlewares.auth.verifyToken],
-    async (req, res) => {
-        req.connectedUser.username = req.body.username
-        req.connectedUser.email = req.body.email
         if (req.body.password.length > 0) {
             if (req.body.password !== req.body.passwordRepeat) {
                 res.status(500).send({message: "Les mots de passe ne correspondent pas."});

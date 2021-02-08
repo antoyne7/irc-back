@@ -60,7 +60,6 @@ router.post('/auth/signin',
     async (req, res) => {
         // Login a registered user
         try {
-            console.log("Le zgegon")
             if (!req.body.firstCredential || !req.body.password) {
                 res.status(401).send({
                     message: "Veuillez remplir vos informations",
@@ -111,7 +110,7 @@ router.post('/auth/guest_login',
     ],
     async (req, res) => {
         try {
-            if (!req.body.username){
+            if (!req.body.username) {
                 res.status(401).send({
                     message: "Veuillez remplir vos informations",
                     type: "form_error"
@@ -169,10 +168,12 @@ router.post('/auth/delete',
             const channels = await User.findById(id).select("channels").exec();
             if (channels.channels) {
                 for (let chann of channels.channels) {
-                    const channelFound = await Channel.findById(chann._id).select("users").exec();
-                    if (channelFound) {
-                        console.log(channelFound.users.indexOf(id));
-                        channelFound.users.splice(channelFound.users.indexOf(id), 1);
+                    const channelFound = await Channel.findById(chann._id).select("users isPrivate").exec();
+                    if (channelFound && !channelFound.isPrivate) {
+                        console.log("Le Id du user",id)
+                        console.log("Le id du serveur", channelFound.users.findIndex(userId => console.log(userId)))
+                        console.log(channelFound.users[channelFound.users.findIndex(userId => userId._id.toString() == id.toString())])
+                        channelFound.users.splice(channelFound.users.findIndex(userId => userId._id.toString() == id.toString()), 1);
                         await channelFound.save((err) => {
                             if (err) {
                                 res.status(500).send({message: err});
@@ -208,9 +209,14 @@ router.get('/auth/check',
     [middlewares.auth.verifyToken],
     async (req, res) => {
         const user = req.connectedUser;
-        user.password = "";
+        if (user) user.password = "";
 
-        await user.populate({ path: 'channels', populate: { path: 'users', populate: {path: '_id'} }}).execPopulate()
+        await user.populate({
+            path: 'channels', populate: {
+                path: 'users', populate: {
+                    path: '_id', match: { username: { $ne: user?.username } }
+                }}}).execPopulate()
+
 
         res.status(200).send(user);
     });

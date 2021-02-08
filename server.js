@@ -8,13 +8,13 @@ const fs = require('fs');
 
 const app = express();
 
-// const options = {
-//     key: fs.readFileSync('ssl/key.pem'),
-//     cert: fs.readFileSync('ssl/cert.pem')
-// };
+const options = {
+    key: fs.readFileSync('ssl/key.pem'),
+    cert: fs.readFileSync('ssl/cert.pem')
+};
 
 const corsOptions = {
-    origin: ["https://ircal-mern.vercel.app", "http://localhost:3000"],
+    origin: ["https://ircal-mern.vercel.app", "http://localhost:3000", "https://localhost:3000", "https://192.168.1.146:3000", "http://192.168.1.146:3000"],
 };
 
 const server = http.createServer(app);
@@ -41,7 +41,7 @@ require("./socketio")(server);
 // require("./socketio")(https_server);
 
 // Start listening
-const PORT = process.env.PORT || 65080;
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}.`);
 });

@@ -1,10 +1,5 @@
-const express = require('express');
-const {Mongoose} = require('mongoose');
-const middlewares = require('../middlewares');
-const router = express.Router();
 const Channel = require('../models/channel.model');
 const User = require('../models/user.model');
-const commands = require('../config/command.config');
 
 
 module.exports = {
@@ -54,13 +49,15 @@ module.exports = {
                 }
 
                 let privateChannel = await Channel.findOne({
-                    users: [{_id: sender._id}, {_id: receiver._id}],
+                    users: { $all: [{_id: sender._id}, {_id: receiver._id}] } ,
                     isPrivate: true
                 })
 
+                console.log('privateChannel', privateChannel)
+
                 if (!privateChannel) {
                     privateChannel = new Channel({
-                        name: '%'+ Date.now() +'%',
+                        name: '%' + Date.now() + '%',
                         slug: Date.now(),
                         password: null,
                         creator: sender._id,
@@ -98,6 +95,7 @@ module.exports = {
                     })
                     socket.to(privateChannel.name).emit('chatMessage', message, nickname ? {username: "~" + nickname} : user, Date.now())
                 }
+
                 return {
                     message: "Message envoyé",
                     code: 200,
@@ -121,12 +119,19 @@ module.exports = {
                 }
                 (await channel).save(err => {
                     if (err) {
-                        console.log("encore");
                         throw {message: "Le salon n'a pas été trouvé", code: 400}
                     }
 
                 });
-                return {message: "Le surnom a bien été changé", code: 200}
+                if (req.body.parameter === "" || req.body.parameter === null || !req.body.parameter) {
+                    return {message: "Le surnom a bien été réinitialisé dans ce channel", data: {action: "nick"}, code: 200}
+                } else {
+                    return {
+                        message: "Le surnom a bien été changé pour \"" + req.body.parameter + "\" dans ce channel.",
+                        data: {action: "nick"},
+                        code: 200
+                    }
+                }
             }
         },
 
@@ -142,7 +147,7 @@ module.exports = {
                 const findChan = await Channel.findOne({name: req.body.parameter});
 
                 if (findChan) {
-                    return {message: "Une erreur est survenue lors de la création.", code: 400}
+                    return {message: "Ce nom de salon est déjà utilisé.", code: 400}
                 }
                 req.connectedUser.channels.push(channel._id);
                 channel.users.push(req.connectedUser._id);
@@ -229,11 +234,20 @@ module.exports = {
         },
         {
             command: "diablox9",
-            executeCommand: async (req) => {
+            executeCommand: async () => {
                 return {
                     message: "Ouah vous êtes un pur gamer",
                     code: 200,
                     data: {video: "gZ0GRzpjxR8", action: "diablox9"}
+                }
+            }
+        },{
+            command: "gotaga",
+            executeCommand: async () => {
+                return {
+                    message: "Ouah vous êtes toujours un pur gamer",
+                    code: 200,
+                    data: {video: "A8Q3iu_kDJk", action: "gotaga"}
                 }
             }
         },

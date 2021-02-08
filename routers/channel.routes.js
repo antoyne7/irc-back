@@ -71,19 +71,70 @@ router.get("/channel/delete",
 
             if (channel.creator != req.userId) {
                 res.status(403).send({message: "Vous n'êtes pas le propiétaire du salon"});
+                return
             }
 
             if (channel.isPrivate) {
                 res.status(403).send({message: "Impossible de supprimer votre conversation privé"});
+                return
             }
 
             await Channel.deleteOne({_id: channel._id})
 
             res.status(200).send({message: "Le salon a bien été supprimé."})
         } catch (e) {
-            console.log(e)
+            res.status(500).send({message: "Une erreur s'est produite"})
         }
     });
+router.post("/channel/leave",
+    [middlewares.auth.verifyToken],
+    async (req, res) => {
+        try {
+            const channel = await Channel.findById(req.body.channel).exec();
+            if (!channel) {
+                res.status(400).send({message: "Le salon n'a pas été trouvé"})
+                return
+            }
+            if (channel.slug === 'global') {
+                res.status(403).send({message: "Impossible de quitter le salon global"})
+                return
+            }
+
+            if (!req.connectedUser.channels.includes(channel._id)) {
+                res.status(403).send({message: "Vous ne faites pas partie de ce salon"})
+                return
+            }
+
+            if (channel.isPrivate) {
+                const user1 = await User.findById(channel.users[0]._id)
+                const user2 = await User.findById(channel.users[1]._id)
+
+                user1.channels = user1.channels.filter(chanID => chanID.toString() !== channel._id.toString())
+                user2.channels = user2.channels.filter(chanID => chanID.toString() !== channel._id.toString())
+
+                await channel.deleteOne()
+                await user1.save();
+                await user2.save();
+
+                res.status(200).send({message: `Les messages privés de ce salon ont été supprimés.`})
+                return
+            }
+
+            const userChanIndex = req.connectedUser.channels.indexOf(channel._id);
+            const chanIndex = channel.users.indexOf(req.connectedUser._id);
+
+            req.connectedUser.channels.splice(userChanIndex, 1);
+            channel.users.splice(chanIndex, 1);
+
+
+            await req.connectedUser.save();
+            await channel.save();
+            res.status(200).send({message: `Vous avez quitté ${channel.name} avec succès !`})
+        } catch (err) {
+            res.status(400).send({message: err})
+        }
+    }
+)
 
 router.get("/channel/get",
     [middlewares.auth.verifyToken],
@@ -116,13 +167,14 @@ router.get("/channel/get",
             }
             const isUserInChannel = channel.users.find(utilisateur => utilisateur._id.toString() == user._id.toString())
 
-            if(!isUserInChannel){
+            if (!isUserInChannel) {
+                console.log('ca a planter lol !')
                 res.status(403).send({message: "Vous ne faites pas partis du salon"})
                 return
             }
 
             if (channel.isPrivate) {
-                await channel.populate({ path: 'users', populate: { path: '_id' }}).execPopulate();
+                await channel.populate({path: 'users', populate: {path: '_id'}}).execPopulate();
             }
 
             res.status(200).send({channel})
@@ -137,7 +189,8 @@ router.get("/channel/search",
         if (req.query.search.length >= 3) {
             new Promise((resolve, reject) => {
                 Channel.find(
-                        {$or: [{slug: {$regex: req.query.search, $ne: 'global'}}, {name: {$regex: req.query.search}}],
+                    {
+                        $or: [{slug: {$regex: req.query.search, $ne: 'global'}}, {name: {$regex: req.query.search}}],
                         isPrivate: false,
                     },
                     (err, chanlist) => {
@@ -208,19 +261,31 @@ router.get("/channel/messages/get", [middlewares.auth.verifyToken],
     async (req, res) => {
         try {
             const channel = await Channel.findById(req.query.channel);
+            const maxRequest = 35;
+            const reqIteration = req.query.reqiteration ?? 0;
+            const addmsg = req.query.addmsg ?? 0;
             if (!channel) {
                 res.status(500).send({message: "Le salon n'a pas été trouvé..."})
                 return
             }
-            let maxRequest = 20;
 
-            if (maxRequest && !isNaN(maxRequest) && channel.messages.length > maxRequest) {
-                channel.messages.reverse();
-                channel.messages.length = maxRequest;
-                channel.messages.reverse();
+            channel.messages.reverse();
+            let messagesTemp = []
+            for (let i = 0; i < maxRequest; i++) {
+                if (channel.messages[(maxRequest * reqIteration) + i + parseInt(addmsg)]) {
+                    messagesTemp.push(channel.messages[(maxRequest * reqIteration) + i + parseInt(addmsg)])
+                }
             }
-            const messages = channel.messages;
 
+            if (maxRequest && !isNaN(maxRequest) && messagesTemp.length > maxRequest) {
+                messagesTemp.length = maxRequest;
+            }
+            let messages;
+            if (reqIteration === 0) {
+                messages = messagesTemp.reverse();
+            } else {
+                messages = messagesTemp
+            }
             const msgArray = [];
             for (const msg of messages) {
                 await findUser(msg.user).then((userDetails) => {
@@ -246,11 +311,13 @@ router.get("/channel/messages/get", [middlewares.auth.verifyToken],
             }
 
             res.status(200).send(msgArray)
-        } catch (e) {
+        } catch
+            (e) {
             console.log(e)
             res.status(400).send(e)
         }
-    });
+    }
+);
 
 router.post("/channel/settings", [middlewares.auth.verifyToken, upload.single('picture')],
     async (req, res) => {

@@ -6,7 +6,6 @@ const Channel = require("../models/channel.model")
 const User = require("../models/user.model")
 
 const commands = require('../config/command.config');
-const PeerServer = require("peer").PeerServer;
 
 let users = [];
 let rooms = [];
@@ -17,7 +16,7 @@ module.exports = function (server) {
 
     const io = socketio(server, {
         cors: {
-            origin: ["https://ircal-mern.vercel.app", "http://localhost:3000", "https://localhost:3000"],
+            origin: ["https://ircal-mern.vercel.app", "http://localhost:3000", "https://localhost:3000", "https://192.168.1.146:3000", "http://192.168.1.146:3000"],
             methods: ["GET", "POST"]
         }
     });
@@ -43,7 +42,6 @@ module.exports = function (server) {
                 console.log(err)
             })
         });
-
         socket.on('chat', (message, room, token, date) => {
             decodeToken(token).then((user) => {
                 console.log(message, user.username, " | room: " + room.name);
@@ -63,7 +61,6 @@ module.exports = function (server) {
                 })
             })
         });
-
         socket.on('command', (room, message, token, parameters) => {
             decodeToken(token).then((user) => {
                 findChannel(room).then((channel) => {
@@ -76,8 +73,6 @@ module.exports = function (server) {
                 })
             })
         });
-
-
         socket.on('disconnect', () => {
             const userIndex = users.findIndex(user => user.id === socket.id);
             const userLeft = users[userIndex];
@@ -89,17 +84,16 @@ module.exports = function (server) {
             }
             socket.disconnect();
         });
-
         socket.on('makingCall', (room, isVideo, token) => {
             decodeToken(token).then((userDetails) => {
                 const roomIndex = findRoomIndex(room.name)
                 let usersInChan = users.filter(user => user.room === room.name)
+                console.log(usersInChan)
                 if (usersInChan.length > 1) {
                     if (room.name && !rooms[roomIndex]?.isInCall) {
                         rooms[roomIndex].isInCall = true;
                         rooms[roomIndex] = {...rooms[roomIndex], usersInCall: [userDetails._id]}
                         socket.to(room.name).broadcast.emit("incomingCall", usersInChan, userDetails._id)
-                        io.to(socket.id).emit("closeTiming", usersInChan)
                     } else {
                         const findUser = rooms[roomIndex].usersInCall?.find(userId => userId.toString() == userDetails._id.toString())
                         if (!findUser) {
@@ -110,12 +104,13 @@ module.exports = function (server) {
                         }
                     }
                 }
+                io.to(socket.id).emit("closeTiming", usersInChan)
             })
         })
         socket.on("joinCall", (room, token) => {
             decodeToken(token).then((userDetails) => {
-                io.to(room).emit("channelInCall")
-                const roomIndex = findRoomIndex(room)
+                    io.to(room).emit("channelInCall")
+                    const roomIndex = findRoomIndex(room)
                     const findUser = rooms[roomIndex].usersInCall?.find(userId => userId.toString() == userDetails._id.toString())
                     if (!findUser) {
                         const usersInCall = rooms[roomIndex].usersInCall ? [...rooms[roomIndex].usersInCall, userDetails._id] : [userDetails._id];
@@ -126,12 +121,10 @@ module.exports = function (server) {
                 }
             )
         })
-
         socket.on("sending signal", payload => {
             const usrId = findSocketId(payload.userToSignal)
             io.to(usrId).emit('user joined', {signal: payload.signal, callerID: payload.callerID});
         });
-
         socket.on("returning signal", payload => {
             const usrId = findSocketId(payload.callerID)
             io.to(usrId).emit('receiving returned signal', {
@@ -140,12 +133,11 @@ module.exports = function (server) {
                 id: socket.id
             });
         });
-
         socket.on('closeCallNotif', (users, room) => {
             const roomIndex = findRoomIndex(room)
             let usersInChan = users.filter(user => user.room === room)
             usersInChan.forEach((user) => {
-                if (!rooms[roomIndex].usersInCall.find(usr => usr == user.userId)) io.to(user.id).emit('closeCall')
+                if (rooms[roomIndex]?.usersInCall && !rooms[roomIndex].usersInCall.find(usr => usr == user.userId)) io.to(user.id).emit('closeCall')
             })
             if (rooms[roomIndex]?.usersInCall?.length <= 1) {
                 rooms[roomIndex].isInCall = false;

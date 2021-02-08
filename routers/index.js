@@ -16,11 +16,6 @@ module.exports = function (app) {
         next();
     });
 
-    router.get('/test', async (req, res) => {
-        // Register a new user
-        res.send({message: 'le test hehe'}).status(200)
-    })
-
     // Les routes
     router.use(authRoutes);
     router.use(commandRoutes);
