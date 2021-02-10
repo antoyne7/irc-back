@@ -25,7 +25,10 @@ router.post("/channel/add", [
     ],
     async (req, res) => {
         try {
-            if (req.body.name.length <= 3) res.status(400).send({message: "Veuillez renseigner un nom de channel de plus de 3 caractères"})
+            if (req.body.name.length <= 3) {
+                res.status(400).send({message: "Veuillez renseigner un nom de channel de plus de 3 caractères"})
+                return
+            }
             const channel = new Channel({
                 name: req.body.name.trim(),
                 slug: slugify(req.body.slug.trim()),
@@ -236,11 +239,14 @@ router.post("/channel/connect", [middlewares.auth.verifyToken],
                         await channel.save();
                         await req.connectedUser.save();
                         res.status(200).send({message: "Connecté à ce salon avec succès!", slug: channel.slug})
+                        return
                     } else {
                         res.status(403).send({message: "Le mot de passe est incorrect"})
+                        return
                     }
                 } else {
-                    res.status(400).send({message: "Rentrez le mot de passe", slug: channel.slug, password: true})
+                    res.status(200).send({message: "Rentrez le mot de passe", slug: channel.slug, password: true})
+                    return
                 }
             } else {
                 req.connectedUser.channels.push(channel._id);
@@ -347,12 +353,13 @@ router.post("/channel/settings", [middlewares.auth.verifyToken, upload.single('p
 
         if (req.body.password.length > 0) {
             if (req.body.password !== req.body.passwordRepeat) {
-                res.status(500).send({message: "Les mots de passe ne correspondent pas."});
+                res.status(400).send({message: "Les mots de passe ne correspondent pas."});
                 return;
             }
 
-            if (!bcrypt.compareSync(req.body.oldPassword, channel.password)) {
-                res.status(500).send({message: "Le mot de passe du salon est incorrect."});
+            if (channel.password?.length > 0 &&
+                !bcrypt.compareSync(req.body.oldPassword, channel.password)) {
+                res.status(400).send({message: "Le mot de passe du salon est incorrect."});
                 return;
             }
 
